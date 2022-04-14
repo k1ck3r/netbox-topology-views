@@ -5,8 +5,6 @@ from extras.models import Tag
 
 
 class TopologyDummySerializer(ModelSerializer):
-
     class Meta:
         model = Device
-        fields = ('id', 'name')
-        
+        fields = ("id", "name")

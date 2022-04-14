@@ -1,1 +1,123 @@
-var graph=null,container=null,downloadButton=null,MIME_TYPE="image/png",canvas=null,csrftoken=null,nodes=new vis.DataSet,edges=new vis.DataSet,options={interaction:{hover:!0,hoverConnectedEdges:!0,multiselect:!1},nodes:{shape:"image",brokenImage:"../../static/netbox_topology_views/img/role-unknown.png",size:35,font:{multi:"md",face:"helvetica"}},edges:{length:100,width:2,font:{face:"helvetica"}},physics:{solver:"forceAtlas2Based"}},selected_regions=[],selected_sites=[],coord_save_checkbox=null,htmlElement=null;function getCookie(e){var t=null;if(document.cookie&&""!==document.cookie)for(var n=document.cookie.split(";"),o=0;o<n.length;o++){var a=n[o].trim();if(a.substring(0,e.length+1)===e+"="){t=decodeURIComponent(a.substring(e.length+1));break}}return t}function htmlTitle(e){return(container=document.createElement("div")).innerHTML=e,container}function addEdge(e){e.title=htmlTitle(e.title),edges.add(e)}function addNode(e){e.title=htmlTitle(e.title),nodes.add(e)}function iniPlotboxIndex(){document.addEventListener("DOMContentLoaded",function(){csrftoken=getCookie("csrftoken"),container=document.getElementById("visgraph"),htmlElement=document.getElementsByTagName("html")[0],handleLoadData(),downloadButton=document.getElementById("btnDownloadImage"),btnFullView=document.getElementById("btnFullView"),coord_save_checkbox=document.getElementById("id_save_coords")},!1)}function handleLoadData(){null!==topology_data&&("dark"==htmlElement.dataset.netboxColorMode&&(options.nodes.font.color="#fff"),graph=null,nodes=new vis.DataSet,edges=new vis.DataSet,graph=new vis.Network(container,{nodes:nodes,edges:edges},options),topology_data.edges.forEach(addEdge),topology_data.nodes.forEach(addNode),graph.fit(),canvas=document.getElementById("visgraph").getElementsByTagName("canvas")[0],graph.on("afterDrawing",function(){var e=canvas.toDataURL(MIME_TYPE);downloadButton.href=e,downloadButton.download="topology"}),graph.on("dragEnd",function(e){if(dragged=this.getPositions(e.nodes),coord_save_checkbox.checked&&0!==Object.keys(dragged).length)for(dragged_device in dragged){var t=dragged_device,n=new XMLHttpRequest;n.open("PATCH","/api/plugins/netbox_topology_views/save-coords/save_coords/"),n.setRequestHeader("X-CSRFToken",csrftoken),n.setRequestHeader("Accept","application/json"),n.setRequestHeader("Content-Type","application/json"),n.onreadystatechange=function(){4===n.readyState&&(console.log(n.status),console.log(n.responseText))};var o=JSON.stringify({node_id:t,x:dragged[t].x,y:dragged[t].y});n.send(o)}}))}
+let container = null
+let downloadButton = null
+const MIME_TYPE = 'image/png'
+let canvas = null
+let csrftoken = null
+const options = {
+    interaction: {
+        hover: true,
+        hoverConnectedEdges: true,
+        multiselect: false
+    },
+    nodes: {
+        shape: 'image',
+        brokenImage: '../../static/netbox_topology_views/img/role-unknown.png',
+        size: 35,
+        font: {
+            multi: 'md',
+            face: 'helvetica'
+        }
+    },
+    edges: {
+        length: 100,
+        width: 2,
+        font: {
+            face: 'helvetica'
+        }
+    },
+    physics: {
+        solver: 'forceAtlas2Based'
+    }
+}
+let coordSaveCheckbox = null
+let htmlElement = null
+
+const getCookie = (name) => {
+    if (!document.cookie) return null
+
+    const cookie = document.cookie
+        .split(';')
+        .find((cookie) => {
+            return cookie.trim().substring(0, name.length + 1) === name + '='
+        })
+        ?.substring(name.length + 1)
+
+    return cookie ? decodeURIComponent(cookie) : null
+}
+
+const htmlTitle = (html) => {
+    const container = document.createElement('div')
+    container.innerHTML = html
+    return container
+}
+
+const handleLoadData = () => {
+    if (topologyData === null) return
+    if (htmlElement.dataset.netboxColorMode == 'dark') {
+        options.nodes.font.color = '#fff'
+    }
+
+    const nodes = new vis.DataSet()
+    const edges = new vis.DataSet()
+    const graph = new vis.Network(container, { nodes, edges }, options)
+
+    topologyData.edges.forEach((edge) => {
+        edge.title = htmlTitle(edge.title)
+        edges.add(edge)
+    })
+
+    topologyData.nodes.forEach((node) => {
+        node.title = htmlTitle(node.title)
+        nodes.add(node)
+    })
+
+    graph.fit()
+    canvas = document
+        .getElementById('visgraph')
+        .getElementsByTagName('canvas')[0]
+
+    graph.on('afterDrawing', () => {
+        const image = canvas.toDataURL(MIME_TYPE)
+        downloadButton.href = image
+        downloadButton.download = 'topology'
+    })
+
+    graph.on('dragEnd', (params) => {
+        if (!coordSaveCheckbox.checked) return
+        this.getPositions(params.nodes).forEach((node) => {
+            fetch(
+                '/api/plugins/netbox_topology_views/save-coords/save_coords/',
+                {
+                    method: 'PATH',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        node_id: node,
+                        x: dragged[node].x,
+                        y: dragged[node].y
+                    })
+                }
+            ).then((res) => {
+                console.log(res.status)
+                console.log(res.statusText)
+            })
+        })
+    })
+}
+
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        csrftoken = getCookie('csrftoken')
+        container = document.getElementById('visgraph')
+        htmlElement = document.getElementsByTagName('html')[0]
+        handleLoadData()
+        downloadButton = document.getElementById('btnDownloadImage')
+        btnFullView = document.getElementById('btnFullView')
+        coordSaveCheckbox = document.getElementById('id_save_coords')
+    },
+    false
+)

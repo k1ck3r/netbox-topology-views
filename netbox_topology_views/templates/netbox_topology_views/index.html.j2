@@ -32,6 +32,11 @@
 			  Network
 			</button>
 		</li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="power-tab" data-bs-toggle="tab" data-bs-target="#networks" type="button" role="tab" aria-controls="filters-form" aria-selected="false">
+			  Power
+			</button>
+    </li>
 		{% if filter_form %}
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="filters-form-tab" data-bs-toggle="tab" data-bs-target="#filters-form" type="button" role="tab" aria-controls="object-list" aria-selected="false">
@@ -50,12 +55,8 @@
 
       <div class="tab-pane show active" id="networks" role="tabpanel" aria-labelledby="network-tab">
         <div class="panel-body">
-          <div id="visgraph" class=""></div>
+          <div id="visgraph"></div>
         </div>
-
-        <script type="text/javascript">
-          var topology_data = {{ topology_data | safe }};
-        </script>
       </div>
 
       {% if filter_form %}
@@ -69,7 +70,9 @@
 {% endblock content-wrapper %}
 
 {% block javascript %}
+  <script type="text/javascript">
+    const topologyData = {{ topology_data | safe }};
+  </script>
   <script src="{% static 'netbox_topology_views/js/vendor.js' %}"></script>
 	<script src="{% static 'netbox_topology_views/js/app.js' %}"></script>
-	<script type="application/javascript">iniPlotboxIndex()</script>
 {% endblock javascript %}

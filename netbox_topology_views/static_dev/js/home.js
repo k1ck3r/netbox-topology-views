@@ -1,12 +1,9 @@
-var graph = null;
-var container = null;
-var downloadButton = null;
-var MIME_TYPE = "image/png";
-var canvas = null;
-var csrftoken = null;
-var nodes = new vis.DataSet();
-var edges = new vis.DataSet();
-var options = {
+let container = null
+let downloadButton = null
+const MIME_TYPE = 'image/png'
+let canvas = null
+let csrftoken = null
+const options = {
     interaction: {
         hover: true,
         hoverConnectedEdges: true,
@@ -18,124 +15,109 @@ var options = {
         size: 35,
         font: {
             multi: 'md',
-            face: 'helvetica',
-        },
+            face: 'helvetica'
+        }
     },
     edges: {
         length: 100,
         width: 2,
         font: {
-            face: 'helvetica',
-        },
+            face: 'helvetica'
+        }
     },
     physics: {
         solver: 'forceAtlas2Based'
     }
-};
-var selected_regions = [];
-var selected_sites = [];
-var coord_save_checkbox = null;
-var htmlElement = null;
+}
+let coordSaveCheckbox = null
+let htmlElement = null
 
-function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
+const getCookie = (name) => {
+    if (!document.cookie) return null
+
+    const cookie = document.cookie
+        .split(';')
+        .find((cookie) => {
+            return cookie.trim().substring(0, name.length + 1) === name + '='
+        })
+        ?.substring(name.length + 1)
+
+    return cookie ? decodeURIComponent(cookie) : null
+}
+
+const htmlTitle = (html) => {
+    const container = document.createElement('div')
+    container.innerHTML = html
+    return container
+}
+
+const handleLoadData = () => {
+    if (topologyData === null) return
+    if (htmlElement.dataset.netboxColorMode == 'dark') {
+        options.nodes.font.color = '#fff'
     }
-    return cookieValue;
-}
 
+    const nodes = new vis.DataSet()
+    const edges = new vis.DataSet()
+    const graph = new vis.Network(container, { nodes, edges }, options)
 
-function htmlTitle(html) {
-    container = document.createElement("div");
-    container.innerHTML = html;
-    return container;
-  }
+    topologyData.edges.forEach((edge) => {
+        edge.title = htmlTitle(edge.title)
+        edges.add(edge)
+    })
 
-function addEdge(item) {
-    item.title = htmlTitle( item.title );
-    edges.add(item);
-}
+    topologyData.nodes.forEach((node) => {
+        node.title = htmlTitle(node.title)
+        nodes.add(node)
+    })
 
-function addNode(item) {
-    item.title = htmlTitle( item.title );
-    nodes.add(item);
-}
+    graph.fit()
+    canvas = document
+        .getElementById('visgraph')
+        .getElementsByTagName('canvas')[0]
 
-function iniPlotboxIndex() {
-    document.addEventListener('DOMContentLoaded', function () {
-        csrftoken = getCookie('csrftoken');
-        container = document.getElementById('visgraph');
-        htmlElement = document.getElementsByTagName("html")[0];
-        handleLoadData();
-        downloadButton = document.getElementById('btnDownloadImage');
-        btnFullView = document.getElementById('btnFullView');
-        coord_save_checkbox = document.getElementById('id_save_coords');
-    }, false);
-}
+    graph.on('afterDrawing', () => {
+        const image = canvas.toDataURL(MIME_TYPE)
+        downloadButton.href = image
+        downloadButton.download = 'topology'
+    })
 
-function handleLoadData() {
-    if (topology_data !== null) {
-        
-        if (htmlElement.dataset.netboxColorMode == "dark") {
-            options.nodes.font.color = "#fff";
-        }
-
-        graph = null;
-        nodes = new vis.DataSet();
-        edges = new vis.DataSet();
-        graph = new vis.Network(container, { nodes: nodes, edges: edges }, options);
-        
-        topology_data.edges.forEach(addEdge);
-        topology_data.nodes.forEach(addNode);
-
-        graph.fit();
-        canvas = document.getElementById('visgraph').getElementsByTagName('canvas')[0];
-
-        graph.on('afterDrawing', function () {
-            var image = canvas.toDataURL(MIME_TYPE);
-            downloadButton.href = image;
-            downloadButton.download = "topology";
-        });
-
-        graph.on("dragEnd", function (params) {
-            dragged = this.getPositions(params.nodes);
-
-            if (coord_save_checkbox.checked) {
-                if (Object.keys(dragged).length !== 0) {
-                    for (dragged_device in dragged) {
-                        var node_id = dragged_device;
-
-                        var url = "/api/plugins/netbox_topology_views/save-coords/save_coords/";
-                        var xhr = new XMLHttpRequest();
-                        xhr.open("PATCH", url);
-                        xhr.setRequestHeader('X-CSRFToken', csrftoken );
-                        xhr.setRequestHeader("Accept", "application/json");
-                        xhr.setRequestHeader("Content-Type", "application/json");
-    
-                        xhr.onreadystatechange = function () {
-                        if (xhr.readyState === 4) {
-                            console.log(xhr.status);
-                            console.log(xhr.responseText);
-                        }};
-    
-                        var data = JSON.stringify({
-                            'node_id': node_id,
-                            'x': dragged[node_id].x,
-                            'y': dragged[node_id].y});
-    
-                        xhr.send(data);
-                    }
+    graph.on('dragEnd', (params) => {
+        if (!coordSaveCheckbox.checked) return
+        this.getPositions(params.nodes).forEach((node) => {
+            fetch(
+                '/api/plugins/netbox_topology_views/save-coords/save_coords/',
+                {
+                    method: 'PATH',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        node_id: node,
+                        x: dragged[node].x,
+                        y: dragged[node].y
+                    })
                 }
-            }
-        });
-    }
+            ).then((res) => {
+                console.log(res.status)
+                console.log(res.statusText)
+            })
+        })
+    })
 }
+
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        csrftoken = getCookie('csrftoken')
+        container = document.getElementById('visgraph')
+        htmlElement = document.getElementsByTagName('html')[0]
+        handleLoadData()
+        downloadButton = document.getElementById('btnDownloadImage')
+        btnFullView = document.getElementById('btnFullView')
+        coordSaveCheckbox = document.getElementById('id_save_coords')
+    },
+    false
+)
