@@ -51,7 +51,20 @@ const htmlTitle = (html) => {
     return container
 }
 
-const handleLoadData = () => {
+const handleLoadData = async (power = false) => {
+    const query = new URLSearchParams(location.toString())
+
+    if (power) query.append('power_only', 'true')
+    const panel = document.querySelector('.panel-body')
+
+    panel.classList.add('loading')
+
+    const res = await fetch(
+        `/api/plugins/netbox_topology_views/topology/?${query}`
+    )
+
+    const topologyData = await res.json()
+
     if (topologyData === null) return
     if (htmlElement.dataset.netboxColorMode == 'dark') {
         options.nodes.font.color = '#fff'
@@ -72,6 +85,8 @@ const handleLoadData = () => {
     })
 
     graph.fit()
+    panel.classList.remove('loading')
+
     canvas = document
         .getElementById('visgraph')
         .getElementsByTagName('canvas')[0]
@@ -82,11 +97,18 @@ const handleLoadData = () => {
         downloadButton.download = 'topology'
     })
 
+    graph.on(
+        'click',
+        (params) =>
+            params.nodes.length === 1 &&
+            window.open(nodes.get(params.nodes[0]).href, '_blank')
+    )
+
     graph.on('dragEnd', (params) => {
         if (!coordSaveCheckbox.checked) return
-        this.getPositions(params.nodes).forEach((node) => {
-            fetch(
-                '/api/plugins/netbox_topology_views/save-coords/save_coords/',
+        this.getPositions(params.nodes).forEach(async (node) => {
+            const res = await fetch(
+                '/api/plugins/netbox_topology_views/save-coords/',
                 {
                     method: 'PATH',
                     headers: {
@@ -100,21 +122,27 @@ const handleLoadData = () => {
                         y: dragged[node].y
                     })
                 }
-            ).then((res) => {
-                console.log(res.status)
-                console.log(res.statusText)
-            })
+            )
+
+            console.log(node, res.status, res.statusText)
         })
     })
 }
 
+document.querySelector('#network-tab').addEventListener('click', async () => {
+    await handleLoadData(false)
+})
+document.querySelector('#power-tab').addEventListener('click', async () => {
+    await handleLoadData(true)
+})
+
 document.addEventListener(
     'DOMContentLoaded',
-    () => {
+    async () => {
         csrftoken = getCookie('csrftoken')
         container = document.getElementById('visgraph')
         htmlElement = document.getElementsByTagName('html')[0]
-        handleLoadData()
+        await handleLoadData()
         downloadButton = document.getElementById('btnDownloadImage')
         btnFullView = document.getElementById('btnFullView')
         coordSaveCheckbox = document.getElementById('id_save_coords')

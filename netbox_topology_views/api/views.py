@@ -1,20 +1,14 @@
-from rest_framework.viewsets import (
-    ModelViewSet,
-    ViewSet,
-    ReadOnlyModelViewSet,
-    GenericViewSet,
-)
-from rest_framework.decorators import action
+from typing import Any
+
+from dcim.models import Device, PowerFeed, PowerPanel
+from django.conf import settings
+from netbox_topology_views.api.utils import get_topology_data
+from netbox_topology_views.filters import DeviceFilterSet
 from rest_framework.response import Response
-from django.contrib.contenttypes.models import ContentType
 from rest_framework.routers import APIRootView
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from .serializers import TopologyDummySerializer
-from django.conf import settings
-
-from dcim.models import DeviceRole, Device, Cable
-from circuits.models import Circuit
-from extras.models import Tag
 
 
 class TopologyViewsRootView(APIRootView):
@@ -26,8 +20,7 @@ class SaveCoordsViewSet(ReadOnlyModelViewSet):
     queryset = Device.objects.all()
     serializer_class = TopologyDummySerializer
 
-    @action(detail=False, methods=["patch"])
-    def save_coords(self, request):
+    def patch(self, request):
         results = {}
         if settings.PLUGINS_CONFIG["netbox_topology_views"]["allow_coordinates_saving"]:
             device_id = None
@@ -68,3 +61,20 @@ class SaveCoordsViewSet(ReadOnlyModelViewSet):
         else:
             results["status"] = "not allowed to save coords"
             return Response(results, status=500)
+
+
+class TopologyDataViewSet(ReadOnlyModelViewSet):
+    queryset = Device.objects.all()
+    serializer_class = TopologyDummySerializer
+
+    def list(self, request):
+        self.queryset: Any = [
+            *DeviceFilterSet(request.GET, self.queryset).qs,
+            # *PowerFeed.objects.all(),
+            *PowerPanel.objects.all(),
+        ]
+
+        power_only = request.GET.get("power_only", "").lower() == "true"
+        hide_unconnected = request.GET.get("hide_unconnected") == "on"
+
+        return Response(get_topology_data(self.queryset, hide_unconnected, power_only))

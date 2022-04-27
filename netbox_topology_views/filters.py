@@ -1,6 +1,6 @@
 import django_filters
 from dcim.models import Device, DeviceRole, Location, Region, Site
-from django.db.models import Q
+from django.db.models.query import QuerySet
 from netbox.filtersets import NetBoxModelFilterSet
 from tenancy.filtersets import TenancyFilterSet
 from utilities.filters import TreeNodeMultipleChoiceFilter
@@ -35,11 +35,11 @@ class DeviceFilterSet(TenancyFilterSet, NetBoxModelFilterSet):
 
     class Meta:
         model = Device
-        fields = ["id", "name"]
+        fields = ("id", "name")
 
-    def search(self, queryset, name, value):
+    def search(self, queryset: QuerySet, name, value: str):
         """Perform the filtered search."""
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value)
-        return queryset.filter(qs_filter)
+
+        return queryset.filter(name__icontains=value)

@@ -74,4 +74,4 @@ exports.js = gulp.series(js_local, js_vendor)
 exports.js_dev = gulp.series(js_local_dev, js_vendor_dev)
 
 exports.build = gulp.series(exports.css, exports.js)
-exports.build_dev = gulp.series(exports.css, exports.js_dev)
+exports.dev = gulp.series(exports.css, exports.js_dev)

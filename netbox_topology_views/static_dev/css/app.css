@@ -1,3 +1,21 @@
 #visgraph {
     height: 70vh;
 }
+
+.loading #visgraph {
+    opacity: 0;
+}
+
+#loader {
+    display: none;
+    font-size: 2rem;
+}
+
+.loading #loader {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

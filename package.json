@@ -3,8 +3,8 @@
   "name": "netbox_topology_views",
   "version": "1.1.0",
   "scripts": {
-    "resources": "gulp build",
-    "resources_dev": "gulp build_dev"
+    "build": "gulp build",
+    "dev": "gulp dev"
   },
   "dependencies": {
     "vis-data": "^7.1.2",
@@ -17,11 +17,5 @@
     "gulp-concat": "^2.6.1",
     "gulp-terser": "^2.1.0",
     "terser": "^5.12.1"
-  },
-  "peerDependencies": {
-    "@egjs/hammerjs": "^2.0.0",
-    "keycharm": "^0.4.0",
-    "timsort": "^0.3.0",
-    "uuid": "^8.0.0"
   }
 }
