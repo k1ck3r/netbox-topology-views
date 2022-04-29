@@ -45,7 +45,7 @@ class DeviceFilterForm(TenancyFilterForm, NetBoxModelFilterSetForm):
         label=_("Location"),
     )
     hide_unconnected = forms.BooleanField(
-        label=_("Hide Unconnected"), required=False, initial=False
+        label=_("Hide Unconnected"), required=False, initial=True
     )
 
     save_coords = forms.BooleanField(
